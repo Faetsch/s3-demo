@@ -70,7 +70,7 @@ public class CsvService {
 	public Map<String, List<AuftragDto>> auftragToCsv() throws IOException, CsvRequiredFieldEmptyException, CsvDataTypeMismatchException {
 
 		Map<String, List<AuftragDto>> fileNameToAuftragDtosMap = new HashMap<String, List<AuftragDto>>();
-		Map<String, List<AuftragDto>> collect = auftragService.findAllAuftraege().stream().collect(Collectors.groupingBy(AuftragDto::getLand));
+		Map<String, List<AuftragDto>> collect = auftragService.findAllAuftraegeNotSynced().stream().collect(Collectors.groupingBy(AuftragDto::getLand));
 
 		var mappingStrategy = new CustomCSVWriterStrategy<AuftragDto>();
 		mappingStrategy.setType(AuftragDto.class);

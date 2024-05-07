@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,7 +21,7 @@ public class AuftragService {
 	}
 
 	public AuftragDto auftragToDto(Auftrag auftrag) {
-		return new AuftragDto(auftrag.getId(), auftrag.getArtikelnummer(), String.valueOf(auftrag.getKunde().getId()), auftrag.getKunde().getLand());
+		return new AuftragDto(String.valueOf(auftrag.getId()), auftrag.getArtikelnummer(), String.valueOf(auftrag.getKunde().getId()), auftrag.getKunde().getLand());
 	}
 
 	public List<AuftragDto> findAllAuftraege() {
@@ -28,5 +29,20 @@ public class AuftragService {
 				.stream()
 				.map(this::auftragToDto)
 				.collect(Collectors.toList());
+	}
+
+	public List<AuftragDto> findAllAuftraegeNotSynced() {
+		return auftragRepository.findAll()
+				.stream()
+				.filter(a -> !a.isSynced())
+				.map(this::auftragToDto)
+				.collect(Collectors.toList());
+	}
+
+	public void markAuftragAsSynced(AuftragDto auftragDto) {
+		String auftragId = auftragDto.getAuftragId();
+		Optional<Auftrag> auftrag = auftragRepository.findById(auftragId);
+		auftrag.ifPresent(value -> value.setSynced(true));
+		auftragRepository.save(auftrag.get());
 	}
 }

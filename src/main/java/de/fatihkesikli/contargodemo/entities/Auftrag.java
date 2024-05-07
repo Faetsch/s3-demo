@@ -11,9 +11,9 @@ import lombok.Setter;
 public class Auftrag {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "auftragid", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "artikelnummer", nullable = false)
     private String artikelnummer;

@@ -16,7 +16,10 @@ public class FileUploadService {
 		this.amazonS3 = amazonS3;
 	}
 
-	public boolean uploadFile(File file, String bucketName){
+	public boolean uploadFile(File file, String bucketName) {
+		if (!amazonS3.doesBucketExistV2("contargo-bucket")) {
+			amazonS3.createBucket("contargo-bucket");
+		}
 		amazonS3.putObject(new PutObjectRequest(bucketName, file.getName(), file));
 //		return file.delete();
 		return true;
