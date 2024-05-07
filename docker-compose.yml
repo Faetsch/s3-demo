@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: contargo_demo
+      POSTGRES_USER: demouser
+      POSTGRES_PASSWORD: demouser
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  aws:
+    image: 'localstack/localstack'
+    container_name: 'localstack'
+    environment:
+      - SERVICES=s3
+      - USE_SSL=false
+      - AWS_CBOR_DISABLE=1
+      - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    ports:
+      - '4566:4566'
+    volumes:
+      - ./init.sh:/docker-entrypoint-initaws.d/init-s3-bucket.sh
+
+volumes:
+  postgres_data:
