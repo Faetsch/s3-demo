@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @Service
 public class AuftragService {
 
-	private AuftragRepository auftragRepository;
+	private final AuftragRepository auftragRepository;
 
 	@Autowired
 	public AuftragService(AuftragRepository auftragRepository) {
@@ -22,13 +22,6 @@ public class AuftragService {
 
 	public AuftragDto auftragToDto(Auftrag auftrag) {
 		return new AuftragDto(String.valueOf(auftrag.getId()), auftrag.getArtikelnummer(), String.valueOf(auftrag.getKunde().getId()), auftrag.getKunde().getLand());
-	}
-
-	public List<AuftragDto> findAllAuftraege() {
-		return auftragRepository.findAll()
-				.stream()
-				.map(this::auftragToDto)
-				.collect(Collectors.toList());
 	}
 
 	public List<AuftragDto> findAllAuftraegeNotSynced() {
@@ -41,8 +34,10 @@ public class AuftragService {
 
 	public void markAuftragAsSynced(AuftragDto auftragDto) {
 		String auftragId = auftragDto.getAuftragId();
-		Optional<Auftrag> auftrag = auftragRepository.findById(auftragId);
-		auftrag.ifPresent(value -> value.setSynced(true));
-		auftragRepository.save(auftrag.get());
+		Optional<Auftrag> optAuftrag = auftragRepository.findById(auftragId);
+		optAuftrag.ifPresent(auftrag -> {
+			auftrag.setSynced(true);
+			auftragRepository.save(auftrag);
+		});
 	}
 }

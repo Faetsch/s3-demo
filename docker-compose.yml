@@ -22,8 +22,6 @@ services:
       - DATA_DIR=/tmp/localstack/data
     ports:
       - '4566:4566'
-    volumes:
-      - ./init.sh:/docker-entrypoint-initaws.d/init-s3-bucket.sh
 
 volumes:
   postgres_data:

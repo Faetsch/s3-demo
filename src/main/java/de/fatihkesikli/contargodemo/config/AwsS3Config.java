@@ -35,7 +35,7 @@ public class AwsS3Config {
 		return AmazonS3ClientBuilder.standard()
 				.withCredentials(getCredentialsProvider())
 				.withEndpointConfiguration(getEndpointConfiguration(s3EndpointUrl))
-				.enablePathStyleAccess()
+				.enablePathStyleAccess() //wird wohl so von localstack bedingt?
 				.build();
 	}
 

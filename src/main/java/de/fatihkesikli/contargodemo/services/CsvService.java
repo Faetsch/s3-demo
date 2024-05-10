@@ -7,16 +7,16 @@ import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import de.fatihkesikli.contargodemo.dtos.AuftragDto;
 import de.fatihkesikli.contargodemo.dtos.KundeDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +25,12 @@ import java.util.stream.Collectors;
 @Service
 public class CsvService {
 
+	private static final String CSV_FOLDER = "csvs";
+
 	private final AuftragService auftragService;
 	private final KundeService kundeService;
+
+	private final Logger logger = LoggerFactory.getLogger(CsvService.class);
 
 	@Autowired
 	public CsvService(AuftragService auftragService, KundeService kundeService) {
@@ -34,77 +38,68 @@ public class CsvService {
 		this.kundeService = kundeService;
 	}
 
-	public Map<String, List<KundeDto>> kundeToCsv() throws IOException, CsvRequiredFieldEmptyException, CsvDataTypeMismatchException {
+	//TODO - evtl Kunde und Auftrag gemeinsames interface "S3Syncable" teilen um doppelte Logik wie hier zu sparen
+	public Map<String, List<KundeDto>> kundeToCsv() {
+		final Map<String, List<KundeDto>> kundenByLandMap = kundeService.findAllKundenNotSynced()
+				.stream()
+				.collect(Collectors.groupingBy(KundeDto::getLand));
 
-		Map<String, List<KundeDto>> fileNameToKundeDtoMap = new HashMap<String, List<KundeDto>>();
-		List<KundeDto> allKunden = kundeService.findAllKunden();
+		return dtosToCSv(kundenByLandMap, KundeDto.class, "kunde");
+	}
 
-		Map<String, List<KundeDto>> kundenByLandMap = allKunden.stream().collect(Collectors.groupingBy(KundeDto::getLand));
+	public Map<String, List<AuftragDto>> auftragToCsv() {
+		final Map<String, List<AuftragDto>> auftraegeByLandMap = auftragService.findAllAuftraegeNotSynced().
+				stream()
+				.collect(Collectors.groupingBy(AuftragDto::getLand));
 
-		var mappingStrategy = new CustomCSVWriterStrategy<KundeDto>();
-		mappingStrategy.setType(KundeDto.class);
+		return dtosToCSv(auftraegeByLandMap, AuftragDto.class, "auftraege");
+	}
 
+	private <T> Map<String, List<T>> dtosToCSv(final Map<String, List<T>> landToDtoMap, Class clazz, String tableName) {
+		HashMap<String, List<T>> fileToDtoMap = new HashMap<>();
+		HeaderColumnNameMappingStrategy<T> headerStrategy = new NoHeaderMappingStrategy<>();
+		headerStrategy.setType(clazz);
 
-		kundenByLandMap.forEach((land, kundeDtos) -> {
-			try {
-				String fileName = "csvs/" + "kunde_" + land + "_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-				File f = new File(fileName);
-				Writer writer = new FileWriter(f);
-				new StatefulBeanToCsvBuilder<KundeDto>(writer)
+		File csvFolder = new File(CSV_FOLDER);
+		if(!csvFolder.exists()) {
+			csvFolder.mkdir();
+		}
+
+		landToDtoMap.forEach((land, dtos) -> {
+			//CSVs sollen laut Anforderung nach Land gruppiert sein
+			String fileName = generateFileName(land, tableName);
+			File f = new File(fileName);
+			try (FileWriter writer = new FileWriter(f)){
+				new StatefulBeanToCsvBuilder<T>(writer)
 						.withSeparator(',')
 						.withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
-						.withMappingStrategy(mappingStrategy)
+						.withMappingStrategy(headerStrategy)
 						.build()
-						.write(kundeDtos);
+						.write(dtos);
 				writer.flush();
-				fileNameToKundeDtoMap.put(fileName, kundeDtos);
+				//wir wollen uns später die Kunden merken, die in einer CSV file gelistet sind, damit
+				//wir wissen, welche Kunden wir in der DB als synchronisiert markieren müssen
+				fileToDtoMap.put(fileName, dtos);
 			} catch (IOException | CsvDataTypeMismatchException | CsvRequiredFieldEmptyException e) {
-				System.out.println(e);
+				logger.error(e.getMessage());
 			}
-
 		});
-
-		return fileNameToKundeDtoMap;
+		return fileToDtoMap;
 	}
 
-	public Map<String, List<AuftragDto>> auftragToCsv() throws IOException, CsvRequiredFieldEmptyException, CsvDataTypeMismatchException {
-
-		Map<String, List<AuftragDto>> fileNameToAuftragDtosMap = new HashMap<String, List<AuftragDto>>();
-		Map<String, List<AuftragDto>> collect = auftragService.findAllAuftraegeNotSynced().stream().collect(Collectors.groupingBy(AuftragDto::getLand));
-
-		var mappingStrategy = new CustomCSVWriterStrategy<AuftragDto>();
-		mappingStrategy.setType(AuftragDto.class);
-
-		collect.forEach((land, auftragdtos) -> {
-			try {
-				Writer writer = null;
-				String fileName = "csvs/" + "auftraege_" + land + "_" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-				writer = new FileWriter(fileName);
-				new StatefulBeanToCsvBuilder<AuftragDto>(writer)
-						.withSeparator(',')
-						.withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
-						.withMappingStrategy(mappingStrategy)
-						.build()
-						.write(auftragdtos);
-				writer.flush();
-				fileNameToAuftragDtosMap.put(fileName, auftragdtos);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (CsvRequiredFieldEmptyException e) {
-				throw new RuntimeException(e);
-			} catch (CsvDataTypeMismatchException e) {
-				throw new RuntimeException(e);
-			}
-
-		});
-
-		return fileNameToAuftragDtosMap;
+	private String generateFileName(String land, String table) {
+		return CSV_FOLDER + "/"
+				+ table + "_"
+				+ land + "_"
+				+ LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+				+ ".csv";
 	}
 
-	public static class CustomCSVWriterStrategy<T> extends HeaderColumnNameMappingStrategy<T> {
+	//workaround um "keine Kopfzeile" Anforderung zu erfüllen. OpenCSV erstellt ansonsten immer eine Kopfzeile in der CSV
+	private static class NoHeaderMappingStrategy<T> extends HeaderColumnNameMappingStrategy<T> {
 		@Override
 		public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-			String[] header = super.generateHeader(bean);
+			super.generateHeader(bean);
 			return new String[]{};
 		}
 	}
