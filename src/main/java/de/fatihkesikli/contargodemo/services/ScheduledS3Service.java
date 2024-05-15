@@ -39,6 +39,7 @@ public class ScheduledS3Service {
 		logger.info("Starting Upload");
 		fileUploadService.checkAndCreateBucket();
 
+		long startTime = System.currentTimeMillis();
 		final Map<String, List<AuftragDto>> auftragMap = csvService.auftragToCsv();
 		final Map<String, List<KundeDto>> kundeMap = csvService.kundeToCsv();
 
@@ -48,14 +49,16 @@ public class ScheduledS3Service {
 			fileUploadService.uploadAndDeleteFile(new File(fileName), bucketName);
 			//wir haben uns in der Map zu jeder CSV die jeweiligen Business Objects gemerkt,
 			//daher können wir alle Aufträge unter dem filename (key) als synced markieren
+			logger.info("Currently uploading " + fileName + " into " + bucketName + " containing " + auftragDtos.size() + " row(s)");
 			auftragDtos.forEach(auftragService::markAuftragAsSynced);
 		});
 
 		kundeMap.forEach((fileName, kundeDtos) -> {
 			fileUploadService.uploadAndDeleteFile(new File(fileName), bucketName);
 			//gleiches wie oben bei Kunde
+			logger.info("Currently uploading " + fileName + " into " + bucketName + " containing " + kundeDtos.size() + " row(s)");
 			kundeDtos.forEach(kundeService::markKundeAsSynced);
 		});
-		logger.info("Done uploading");
+		logger.info("Done uploading in " + (System.currentTimeMillis() - startTime) + " ms");
 	}
 }

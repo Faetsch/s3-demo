@@ -1,7 +1,5 @@
 package de.fatihkesikli.contargodemo.entities;
 
-import com.opencsv.bean.CsvBindAndJoinByName;
-import com.opencsv.bean.CsvBindByName;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -46,7 +44,7 @@ public class Kunde {
     @Column(name = "firmenname", nullable = false)
     private String firmenname;
 
-    @OneToMany(mappedBy = "kunde")
+    @OneToMany(mappedBy = "kunde", cascade = CascadeType.ALL)
     private Set<Auftrag> auftraege;
 
     @Column(name = "synced")

@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 public class CsvService {
 
 	private static final String CSV_FOLDER = "csvs";
+	private static final String KUNDE_TABLE_NAME = "kunde";
+	private static final String AUFTRAEGE_TABLE_NAME = "auftraege";
 
 	private final AuftragService auftragService;
 	private final KundeService kundeService;
@@ -44,7 +46,7 @@ public class CsvService {
 				.stream()
 				.collect(Collectors.groupingBy(KundeDto::getLand));
 
-		return dtosToCSv(kundenByLandMap, KundeDto.class, "kunde");
+		return dtosToCSv(kundenByLandMap, KundeDto.class, KUNDE_TABLE_NAME);
 	}
 
 	public Map<String, List<AuftragDto>> auftragToCsv() {
@@ -52,7 +54,7 @@ public class CsvService {
 				stream()
 				.collect(Collectors.groupingBy(AuftragDto::getLand));
 
-		return dtosToCSv(auftraegeByLandMap, AuftragDto.class, "auftraege");
+		return dtosToCSv(auftraegeByLandMap, AuftragDto.class, AUFTRAEGE_TABLE_NAME);
 	}
 
 	private <T> Map<String, List<T>> dtosToCSv(final Map<String, List<T>> landToDtoMap, Class clazz, String tableName) {
@@ -91,7 +93,7 @@ public class CsvService {
 		return CSV_FOLDER + "/"
 				+ table + "_"
 				+ land + "_"
-				+ LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+				+ LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss"))
 				+ ".csv";
 	}
 

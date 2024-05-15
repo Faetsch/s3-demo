@@ -25,9 +25,7 @@ public class AuftragService {
 	}
 
 	public List<AuftragDto> findAllAuftraegeNotSynced() {
-		return auftragRepository.findAll()
-				.stream()
-				.filter(a -> !a.isSynced())
+		return auftragRepository.findBySynced(false).stream()
 				.map(this::auftragToDto)
 				.collect(Collectors.toList());
 	}

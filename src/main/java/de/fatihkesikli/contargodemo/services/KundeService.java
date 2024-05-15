@@ -26,9 +26,7 @@ public class KundeService {
 	}
 
 	public List<KundeDto> findAllKundenNotSynced() {
-		return kundeRepository.findAll()
-				.stream()
-				.filter(a -> !a.isSynced())
+		return kundeRepository.findBySynced(false).stream()
 				.map(this::kundeToDto)
 				.collect(Collectors.toList());
 	}
