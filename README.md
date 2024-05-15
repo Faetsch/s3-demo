@@ -1,4 +1,4 @@
-# DB to CSV to S3 Bucket Demo
+# DB to CSV to S3 Bucket Demo - Contargo
 
 ## Prerequisites
 - checkout project
